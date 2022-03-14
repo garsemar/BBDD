@@ -162,7 +162,12 @@ do $$
         if found = 1
         then
             call imprimir_dades(cod_emp);
+        else
+            raise exception NO_DATA_FOUND;
         end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'NO EXISTEIX';
     end;
 $$ language plpgsql;
 
@@ -209,7 +214,12 @@ do $$
             res := retornar_dades(cod_emp);
             raise notice 'first_name salary commission_pct job_title manager_id';
             raise notice '% % % % %', res.first_name, res.salary, res.commission_pct, res.job_title, res.manager_id;
+        else
+            raise exception NO_DATA_FOUND;
         end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'NO EXISTEIX';
     end;
 $$ language plpgsql;
 
@@ -241,8 +251,11 @@ do $$
         then
             raise notice 'EXISTEIX DEPARTAMENT';
         else
-            raise notice 'NO EXISTEIX DEPARTAMENT';
+            raise exception NO_DATA_FOUND;
         end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'NO EXISTEIX DEPARTAMENT';
     end;
 $$ language plpgsql;
 
@@ -263,8 +276,11 @@ do $$
             insert into departments (department_id, department_name, manager_id, location_id)
             values (id, depName, manId, loc);
         else
-            raise notice 'EXISTEIX DEPARTAMENT';
+            raise exception NO_DATA_FOUND;
         end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'EXISTEIX DEPARTAMENT';
     end;
 $$ language plpgsql;
 
@@ -281,9 +297,86 @@ do $$
             where department_id = cod_emp;
             raise notice 'Departamento actualizado';
         else
-            raise notice 'No existe el departamento';
+            raise exception NO_DATA_FOUND;
         end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'No existe el departamento';
     end;
 $$ language plpgsql;
 
+/* Exercici 6 */
+create function comprovar_emp(cod_emp employees.employee_id%type) returns boolean language plpgsql as $$
+    declare
+        found numeric;
+    begin
+        select count(employee_id)
+        into found
+        from employees
+        where employee_id = cod_emp;
 
+        if found = 1
+        then
+            return true;
+        else
+            return false;
+        end if;
+    end;
+$$;
+
+create function nom (cod_emp employees.employee_id%type) returns varchar language plpgsql as $$
+    declare
+        nom employees.first_name%type;
+    begin
+        select first_name
+        into nom
+        from employees
+        where employee_id = cod_emp;
+
+        return nom;
+    end;
+$$;
+
+do $$
+    declare
+        cod_emp employees.employee_id%type := :id;
+        res boolean := comprovar_emp(cod_emp);
+    BEGIN
+        if res
+        then
+            raise notice '%', nom(cod_emp);
+        else
+            raise exception NO_DATA_FOUND;
+        end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'No existe';
+    end;
+$$ language plpgsql;
+
+/* Exercici 7 */
+do $$
+    declare
+        cod_dep departments.department_id%type;
+        nom_dep departments.department_name%type;
+        res boolean := comprovar_dept(cod_dep);
+    begin
+        cod_dep := :id;
+        select department_name
+        into strict nom_dep
+        from departments
+        where department_id = cod_dep;
+        raise notice '%', nom_dep;
+        if LEFT(nom_dep, 1) = 'A'
+        then
+            raise notice 'COMENÇA PER LA LLETRA A.';
+        end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'ERROR: no dades';
+        when TOO_MANY_ROWS then
+            raise exception 'ERROR: retorna més files';
+        when OTHERS then
+            raise exception 'ERROR (sense definir)';
+    end;
+$$ language plpgsql;
