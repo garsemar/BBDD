@@ -1,3 +1,25 @@
+/* Exercici 1 */
+select cap.dni_c, p.nom_persona, p.cognoms_persona, p.dni_c, count(*)
+from persona p join persona cap on cap.dni_c = p.dni
+group by cap.dni_c, p.nom_persona, p.cognoms_persona, p.dni_c;
+
+/* Exercici 4 */
+select count(dni) as "zona_mes_poblada"
+from vivenda
+inner join persona p on vivenda.carrer = p.carrer and vivenda.nombre = p.nombre
+group by nom_zona
+having count(dni) in (select max(a) from (select count(dni) as a
+from vivenda inner join persona p2 on vivenda.carrer = p2.carrer and vivenda.nombre = p2.nombre
+group by nom_zona) as b)
+union
+select count(dni) as "zona_menys_poblada"
+from vivenda
+inner join persona p on vivenda.carrer = p.carrer and vivenda.nombre = p.nombre
+group by nom_zona
+having count(dni) in (select min(a) from (select count(dni) as a
+from vivenda inner join persona p2 on vivenda.carrer = p2.carrer and vivenda.nombre = p2.nombre
+group by nom_zona) as b);
+
 /* Part A */
 /* Exercici 1 */
 create table Provincia (
@@ -126,25 +148,3 @@ begin
     raise notice 'El resultat de sumar % i % es %', num1, num2, result;
 end;
 $$ language plpgsql;
-
-/* Exercici 1 */
-select cap.dni_c, p.nom_persona, p.cognoms_persona, p.dni_c, count(*)
-from persona p join persona cap on cap.dni_c = p.dni
-group by cap.dni_c, p.nom_persona, p.cognoms_persona, p.dni_c;
-
-/* Exercici 4 */
-select count(dni) as "zona_mes_poblada"
-from vivenda
-inner join persona p on vivenda.carrer = p.carrer and vivenda.nombre = p.nombre
-group by nom_zona
-having count(dni) in (select max(a) from (select count(dni) as a
-from vivenda inner join persona p2 on vivenda.carrer = p2.carrer and vivenda.nombre = p2.nombre
-group by nom_zona) as b)
-union
-select count(dni) as "zona_menys_poblada"
-from vivenda
-inner join persona p on vivenda.carrer = p.carrer and vivenda.nombre = p.nombre
-group by nom_zona
-having count(dni) in (select min(a) from (select count(dni) as a
-from vivenda inner join persona p2 on vivenda.carrer = p2.carrer and vivenda.nombre = p2.nombre
-group by nom_zona) as b);

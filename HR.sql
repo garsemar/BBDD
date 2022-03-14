@@ -122,4 +122,168 @@ show datestyle;
 
 /* UF3 RA1 PAC2 */
 /* Exercici 1 */
+create type ex1R as (
+    first_name varchar,
+    salary float,
+    commission_pct float,
+    job_title varchar,
+    manager_id numeric
+);
+
+create procedure imprimir_dades (cod_emp employees.employee_id%type) language plpgsql as $$
+    declare
+        res ex1R;
+    begin
+        select first_name, salary, commission_pct, job_title, manager_id
+        into res
+        from employees join jobs j on j.job_id = employees.job_id
+        where employee_id = cod_emp;
+
+        if res.commission_pct IS NULL
+        then
+            res.commission_pct := 0;
+        end if;
+
+        raise notice 'first_name salary commission_pct job_title manager_id';
+        raise notice '% % % % %', res.first_name, res.salary, res.commission_pct, res.job_title, res.manager_id;
+    end;
+$$;
+
+do $$
+    declare
+        cod_emp employees.employee_id%type := :id;
+        found numeric;
+    BEGIN
+        select count(employee_id)
+        into found
+        from employees
+        where employee_id = cod_emp;
+
+        if found = 1
+        then
+            call imprimir_dades(cod_emp);
+        end if;
+    end;
+$$ language plpgsql;
+
+/* Exercici 2 */
+create type ex2R as (
+    first_name varchar,
+    salary float,
+    commission_pct float,
+    job_title varchar,
+    manager_id numeric
+);
+
+create function retornar_dades (cod_emp employees.employee_id%type) returns ex2R language plpgsql as $$
+    declare
+        res ex1R;
+    begin
+        select first_name, salary, commission_pct, job_title, manager_id
+        into res
+        from employees join jobs j on j.job_id = employees.job_id
+        where employee_id = cod_emp;
+
+        if res.commission_pct IS NULL
+        then
+            res.commission_pct := 0;
+        end if;
+
+        return res;
+    end;
+$$;
+
+do $$
+    declare
+        cod_emp employees.employee_id%type := :id;
+        res ex2R;
+        found numeric;
+    BEGIN
+        select count(employee_id)
+        into found
+        from employees
+        where employee_id = cod_emp;
+
+        if found = 1
+        then
+            res := retornar_dades(cod_emp);
+            raise notice 'first_name salary commission_pct job_title manager_id';
+            raise notice '% % % % %', res.first_name, res.salary, res.commission_pct, res.job_title, res.manager_id;
+        end if;
+    end;
+$$ language plpgsql;
+
+/* Exercici 3 */
+create function comprovar_dept(cod_emp departments.department_id%type) returns boolean language plpgsql as $$
+    declare
+        found numeric;
+    begin
+        select count(department_id)
+        into found
+        from departments
+        where department_id = cod_emp;
+
+        if found = 1
+        then
+            return true;
+        else
+            return false;
+        end if;
+    end;
+$$;
+
+do $$
+    declare
+        cod_emp departments.department_id%type := :id;
+        res boolean := comprovar_dept(cod_emp);
+    BEGIN
+        if res
+        then
+            raise notice 'EXISTEIX DEPARTAMENT';
+        else
+            raise notice 'NO EXISTEIX DEPARTAMENT';
+        end if;
+    end;
+$$ language plpgsql;
+
+/* Exercici 4 */
+do $$
+    declare
+        id numeric := :id;
+        depName varchar := :name;
+        manId numeric := :manId;
+        loc numeric := :loc;
+        res boolean;
+    BEGIN
+        res := comprovar_dept(id);
+
+        if not res
+        then
+            raise notice 'NO EXISTEIX DEPARTAMENT';
+            insert into departments (department_id, department_name, manager_id, location_id)
+            values (id, depName, manId, loc);
+        else
+            raise notice 'EXISTEIX DEPARTAMENT';
+        end if;
+    end;
+$$ language plpgsql;
+
+/* Exercici 5 */
+do $$
+    declare
+        cod_emp departments.department_id%type := :id;
+        res boolean := comprovar_dept(cod_emp);
+    BEGIN
+        if res
+        then
+            update departments
+            set department_name = :name, manager_id = :managerId, location_id = :locId
+            where department_id = cod_emp;
+            raise notice 'Departamento actualizado';
+        else
+            raise notice 'No existe el departamento';
+        end if;
+    end;
+$$ language plpgsql;
+
 
