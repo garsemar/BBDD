@@ -380,3 +380,232 @@ do $$
             raise exception 'ERROR (sense definir)';
     end;
 $$ language plpgsql;
+
+/* Activitat 3.2.3 */
+/* Exercici 1 */
+CREATE OR REPLACE FUNCTION controlar_negatiu (salary numeric) RETURNs BOOLEAN language plpgsql as $$
+    BEGIN
+        IF salary < 0 THEN
+            return (FALSE);
+        ELSE
+            return (TRUE);
+        END IF;
+    END;
+$$;
+
+select controlar_negatiu(100);
+
+-- Solució 1 - Amb FOR
+do $$
+    declare
+        v_sal employees.salary%type:=:sal;
+        c1 cursor for select * from employees where salary > v_sal;
+    begin
+        if (select controlar_negatiu(v_sal)) is true then
+            for v_emp in c1 loop
+                raise notice 'El codi d usuari % amb nom % té un salari de %, que és mes gran de %',
+                    v_emp.employee_id, v_emp.first_name, v_emp.salary, v_sal;
+            end loop;
+        else
+            raise notice 'El salari no pot ser negatiu!';
+        end if;
+    end;
+$$ language plpgsql;
+
+-- Solució 2 -  amb open-fetch-close
+do $$
+    declare
+        c1 cursor for select * from employees where salary > :sal;
+        empleats employees%rowtype;
+    begin
+        if (select controlar_negatiu(:sal)) is true then
+            open c1;
+                loop
+                    fetch c1 into empleats;
+                    exit when not found;
+                    raise notice 'El codi d usuari % amb nom % té un salari de %, que és mes gran de %',
+                        empleats.employee_id, empleats.first_name, empleats.salary, :sal;
+                end loop;
+            close c1;
+        else
+            raise notice 'El salari no pot ser negatiu!';
+        end if;
+end;$$ language plpgsql;
+
+/* Exercici 2 */
+create type ex1 as (
+    department_name varchar,
+    city varchar
+);
+
+-- Solució 1 -  amb open-fetch-close
+do $$
+    declare
+        dep cursor for select department_name, city from departments join locations l on l.location_id = departments.location_id;
+        res ex1;
+    begin
+        open dep;
+            loop
+                fetch dep into res;
+                exit when not found;
+                raise notice 'Nom departament %, ciutat %', res.department_name, res.city;
+            end loop;
+        close dep;
+    end;
+$$ language plpgsql;
+
+-- Solució 2 - Amb FOR
+do $$
+    declare
+        dep cursor for select department_name, city from departments join locations l on l.location_id = departments.location_id;
+        res ex1;
+    begin
+        for res in dep
+        loop
+            raise notice 'Nom departament %, ciutat %', res.department_name, res.city;
+        end loop;
+    end;
+$$ language plpgsql;
+
+/* Exercici 3 */
+do $$
+    declare
+        emp cursor for select * from employees;
+        empleats employees%rowtype;
+    begin
+        raise notice 'codi nom salari comissió data d’alta';
+        open emp;
+            loop
+                fetch emp into empleats;
+                exit when not found;
+                raise notice '% % % % %', empleats.employee_id, empleats.first_name, empleats.salary, empleats.commission_pct, empleats.hire_date;
+            end loop;
+        close emp;
+    end;
+$$ language plpgsql;
+
+/* Exercici 4 */
+create type ex4 as (
+    employee_id numeric,
+    first_name varchar,
+    department_id numeric,
+    department_name varchar
+);
+
+-- Solució 1 -  amb open-fetch-close
+do $$
+    declare
+        emp cursor for select employee_id, first_name, d.department_id, department_name from employees join departments d on d.department_id = employees.department_id;
+        res ex4;
+    begin
+        raise notice 'employee_id first_name department_id department_name';
+        open emp;
+            loop
+                fetch emp into res;
+                exit when not found;
+                raise notice '% % % %', res.employee_id, res.first_name, res.department_id, res.department_name;
+            end loop;
+        close emp;
+    end;
+$$ language plpgsql;
+
+-- Solució 2 - Amb FOR
+do $$
+    declare
+        emp cursor for select employee_id, first_name, d.department_id, department_name from employees join departments d on d.department_id = employees.department_id;
+        res ex4;
+    begin
+        raise notice 'employee_id first_name department_id department_name';
+        for res in emp
+        loop
+            raise notice '% % % %', res.employee_id, res.first_name, res.department_id, res.department_name;
+        end loop;
+    end;
+$$ language plpgsql;
+
+/* Exercici 5 */
+do $$
+    declare
+        emp cursor(cod_dep numeric) for select employee_id, first_name from employees where department_id = cod_dep;
+        res employees%rowtype;
+    begin
+        raise notice 'employee_id first_name';
+        open emp(:id);
+            loop
+                fetch emp into res;
+                exit when not found;
+                raise notice '% %', res.employee_id, res.first_name;
+            end loop;
+        close emp;
+    end;
+$$ language plpgsql;
+
+/* Exercici 6 */
+create table emp_salari_nou as select * from employees;
+
+do $$
+    declare
+        emp cursor(cod_dep numeric) for select * from emp_salari_nou where department_id = cod_dep;
+        res employees%rowtype;
+    begin
+        open emp(:id);
+            loop
+                fetch emp into res;
+                exit when not found;
+
+                res.salary := (((18*res.salary)/100)+res.salary)::int;
+
+                update emp_salari_nou
+                set salary = res.salary
+                where employee_id = res.employee_id;
+
+                raise notice 'El nou salari sera: %', res.salary;
+            end loop;
+        close emp;
+    end;
+$$ language plpgsql;
+
+/* Exercici 7 */
+do $$
+    declare
+        emp cursor(cod_dep numeric) for select * from employees where department_id = cod_dep;
+        res employees%rowtype;
+    begin
+        open emp(:id);
+            loop
+                fetch emp into res;
+                exit when not found;
+                if res.commission_pct is not null then
+                    update employees
+                    set commission_pct = commission_pct+0.20
+                    where employee_id = res.employee_id;
+                end if;
+            end loop;
+        close emp;
+    end;
+$$ language plpgsql;
+
+/* Exercici 8 */
+create table emp_salari_nou as select * from employees;
+
+do $$
+    declare
+        emp cursor for select * from employees where commission_pct is not null;
+        res employees%rowtype;
+    begin
+        open emp;
+            loop
+                fetch emp into res;
+                exit when not found;
+
+                res.commission_pct := (((18.00*res.commission_pct)/100.00)+res.commission_pct);
+
+                update emp_salari_nou
+                set commission_pct = res.commission_pct
+                where employee_id = res.employee_id;
+
+                raise notice 'La comissió de l’empleat % s’ha modificat correctament i és %', res.first_name, res.commission_pct;
+            end loop;
+        close emp;
+    end;
+$$ language plpgsql;
