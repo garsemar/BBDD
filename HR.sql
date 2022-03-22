@@ -609,3 +609,146 @@ do $$
         close emp;
     end;
 $$ language plpgsql;
+
+/* PAC 4 - Transaccions */
+/* Exercici 1 */
+create or replace procedure insertardept_tran(nom_dep varchar, manager numeric, cod_loc numeric) language plpgsql as $$
+    declare
+        dep_id numeric;
+        manValid numeric;
+        locValid numeric;
+    begin
+        select max(department_id)+10
+        into dep_id
+        from departments;
+
+        select count(employees.manager_id), count(location_id)
+        into manValid, locValid
+        from employees join departments d on d.department_id = employees.department_id
+        where employees.manager_id = manager and location_id = cod_loc
+        group by employees.manager_id, location_id;
+
+        INSERT INTO departments(department_id, department_name, manager_id, location_id) VALUES (dep_id, nom_dep, manager, cod_loc);
+        IF manValid is null and locValid is null THEN
+            rollback;
+            raise notice 'Manager, location not exist';
+        ELSE
+            COMMIT;
+            raise notice 'Department added';
+        END IF;
+    end;
+$$;
+
+call insertardept_tran(:name, :man, :loc);
+
+/* Exercici 2 */
+create or replace procedure insertaremp_tran(
+    id numeric,
+    fName varchar,
+    lName varchar,
+    mail varchar,
+    number varchar,
+    hDate date,
+    jId varchar,
+    sal float,
+    commPct float,
+    manId numeric,
+    depId numeric
+) language plpgsql as $$
+    declare
+        valid numeric;
+    begin
+        select count(employee_id)
+        into valid
+        from employees
+        where employee_id = id;
+
+        insert into employees (employee_id, first_name, last_name, email, phone_number, hire_date, job_id, salary, commission_pct, manager_id, department_id)
+        values (id, fName, lName, mail, number, hDate, jId, sal, commPct, manId, depId);
+
+        if valid != 0
+        then
+            raise notice 'Empleat ja existent';
+            rollback;
+        elsif id is null or fName is null or lName is null or mail is null or number is null or hDate is null or jId is null or sal is null
+        then
+            raise notice 'Un dels camps obligatoris esta buit';
+            rollback;
+        else
+            commit;
+        end if;
+    end;
+$$;
+
+call insertaremp_tran(:employee_id, :first_name, :last_name, :email, :phone_number, :hire_date, :job_id, :salary, :commission_pct, :manager_id, :department_id);
+
+/* Exercici 3 */
+create or replace procedure modifremp_tran(dep_id numeric, import numeric, perc numeric) language plpgsql as $$
+    declare
+        emp cursor for select * from employees where department_id = dep_id;
+        res employees%rowtype;
+        valid numeric;
+    begin
+        open emp;
+            loop
+                fetch emp into res;
+                exit when not found;
+
+                if import > 0 and perc > 0
+                then
+                    valid := ((res.salary*perc)/100);
+                    if import > valid
+                    then
+                        valid := import;
+                    end if;
+                end if;
+
+                if valid is not null
+                then
+                    update employees
+                    set salary = res.salary + valid
+                    where employee_id = res.employee_id;
+                else
+                    raise notice 'Salario negativo no permitido';
+                    return;
+                end if;
+            end loop;
+        close emp;
+    end;
+$$;
+
+call modifremp_tran(:dep_id, :import, :percentage);
+
+/* Exercici 4 */
+create or replace function buscar_emp(cod_emp numeric) returns boolean language plpgsql as $$
+    declare
+        res numeric;
+    begin
+        select count(employee_id)
+        into res
+        from employees
+        where employee_id = cod_emp;
+
+        if res != 0 then
+            return true;
+        end if;
+        return false;
+    end;
+$$;
+
+create or replace procedure borraremp_tran(cod_emp numeric) language plpgsql as $$
+    declare
+        existEmp boolean := buscar_emp(cod_emp);
+    begin
+        delete from employees where employee_id = cod_emp;
+
+        if existEmp then
+            commit;
+        else
+            raise notice 'Employee dont exists';
+            rollback;
+        end if;
+    end;
+$$;
+
+call borraremp_tran(:id)
