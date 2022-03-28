@@ -154,3 +154,118 @@ $$;
 call printar_q_residus('12', 2016);
 
 
+/* Llenguatge_Procedural_Part2 */
+-- Exercici 1
+create type ex1T as (
+    nom_emptransport varchar,
+    nif_emptransport varchar,
+    kms numeric,
+    cost numeric
+);
+
+create or replace function checkDates(dateIn date, dateFi date) returns boolean language plpgsql as $$
+   begin
+       if dateIn < dateFi then
+           return true;
+        else
+           return false;
+       end if;
+   end;
+$$;
+
+create or replace procedure dadesEmpTrans(tip_trans varchar, dateIn date, dateFi date) language plpgsql as $$
+    declare
+        trans cursor for select nom_emptransport, e.nif_emptransport, kms, cost
+        from trasllat_empresatransport join empresatransportista e on e.nif_emptransport = trasllat_empresatransport.nif_emptransport
+        where data_enviament >= dateIn and data_enviament <= dateFi and tipus_transport = tip_trans;
+        res ex1T;
+        found numeric;
+    begin
+        select count(tipus_transport)
+        into found
+        from trasllat_empresatransport
+        where tipus_transport = tip_trans;
+
+        if found >= 1
+        then
+            if checkDates(dateIn, dateFi)
+            then
+                for res in trans loop
+                    raise notice 'L’empresa %, amb CIF %, ha realitzat % Kms amb un cost % en %, en el periode comprés entre % i %', res.nom_emptransport, res.nif_emptransport, res.kms, res.cost, tip_trans, dateIn, dateFi;
+                end loop;
+            end if;
+        else
+            raise exception NO_DATA_FOUND;
+        end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'El departament no existeix';
+    end;
+$$;
+
+call dadesEmpTrans(:tip_tran, :dateIn, :dateFi);
+
+-- Exercici 2
+create type ex2T as (
+    nom_constituent varchar,
+    nom_empresa varchar,
+    nom_desti varchar
+);
+
+create or replace procedure infoRes(cod_res numeric, dateIn date, dateFi date) language plpgsql as $$
+    declare
+        residu cursor for select nom_constituent, nom_empresa, nom_desti
+        from residu_constituent
+        join constituent c on c.cod_constituent = residu_constituent.cod_constituent
+        join residu r on r.nif_empresa = residu_constituent.nif_empresa and r.cod_residu = residu_constituent.cod_residu
+        join empresaproductora e on e.nif_empresa = r.nif_empresa
+        join trasllat t on e.nif_empresa = t.nif_empresa
+        join desti d on d.cod_desti = t.cod_desti
+        where data_enviament >= dateIn and data_enviament <= dateFi and r.cod_residu = cod_res;
+        res ex2T;
+        found numeric;
+    begin
+        select count(cod_residu)
+        into found
+        from trasllat_empresatransport
+        where cod_residu = cod_res;
+
+        if found >= 1
+        then
+            if checkDates(dateIn, dateFi)
+            then
+                for res in residu loop
+                    raise notice 'El redisu amb codi %, i amb nom %, ha sigut generat per l’empresa amb nom % i transportat al destí %, en el període comprés entre % i %', cod_res, res.nom_constituent, res.nom_empresa, res.nom_desti, dateIn, dateFi;
+                end loop;
+            end if;
+        else
+            raise exception NO_DATA_FOUND;
+        end if;
+    exception
+        when NO_DATA_FOUND then
+            raise exception 'El residu no existeix';
+    end;
+$$;
+
+call infoRes(:cod_res, :dateIn, :dateFi);
+
+-- Exercici 3
+create or replace procedure mesTrans(dateIn date, dateFi date) language plpgsql as $$
+    declare
+        emp cursor for select nif_emptransport, count(*)
+        from trasllat_empresatransport
+        where data_enviament between dateIn::date and dateFi::date
+        group by nif_emptransport
+        having count(*) = (select max(a) from (select count(*) as a from trasllat_empresatransport
+        where data_enviament between dateIn::date and dateFi::date
+        group by nif_emptransport) as a);
+        res trasllat_empresatransport%rowtype;
+    begin
+        if checkDates(dateIn, dateFi)
+        then
+            for res in emp loop
+
+            end loop;
+        end if;
+    end;
+$$;
