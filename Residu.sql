@@ -153,7 +153,6 @@ $$;
 
 call printar_q_residus('12', 2016);
 
-
 /* Llenguatge_Procedural_Part2 */
 -- Exercici 1
 create type ex1T as (
@@ -252,20 +251,65 @@ call infoRes(:cod_res, :dateIn, :dateFi);
 -- Exercici 3
 create or replace procedure mesTrans(dateIn date, dateFi date) language plpgsql as $$
     declare
-        emp cursor for select nif_emptransport, count(*)
+        emp cursor for select nif_emptransport, cost, tipus_transport, count(*)
         from trasllat_empresatransport
         where data_enviament between dateIn::date and dateFi::date
-        group by nif_emptransport
+        group by nif_emptransport, cost, tipus_transport
         having count(*) = (select max(a) from (select count(*) as a from trasllat_empresatransport
         where data_enviament between dateIn::date and dateFi::date
-        group by nif_emptransport) as a);
+        group by nif_emptransport, cost, tipus_transport) as a);
         res trasllat_empresatransport%rowtype;
     begin
         if checkDates(dateIn, dateFi)
         then
             for res in emp loop
+                update trasllat_empresatransport
+                set cost = (((10.00*res.cost)/100.00)+res.cost)
+                where nif_emptransport = res.nif_emptransport;
 
+                raise notice 'Transport: %, cost original: %, cost despres de laument: %', res.tipus_transport, res.cost, (((10.00*res.cost)/100.00)+res.cost)::int;
             end loop;
+        else
+            raise exception DATA_EXCEPTION;
+        end if;
+    exception
+        when DATA_EXCEPTION then
+            raise exception 'Data incorrecta';
+    end;
+$$;
+
+call mesTrans(:dateIn, :dateFi);
+
+-- Exercici 4
+create or replace function checkInsert(nif_emp varchar, cod_res numeric) returns boolean language plpgsql as $$
+    declare
+        residu cursor for select nif_empresa, cod_residu from residu;
+    begin
+        if nif_emp is null or cod_res is null
+        then
+            return true;
+        end if;
+        for res in residu loop
+            if res.nif_empresa = nif_emp and res.cod_residu = cod_res then
+                return true;
+            end if;
+        end loop;
+        return false;
+    end;
+$$;
+
+create or replace procedure insertRegs(nif_emp varchar, cod_res numeric, tox numeric, quant_res numeric, aa_res text) language plpgsql as $$
+    begin
+        if checkInsert(nif_emp, cod_res) then
+            rollback;
+            raise notice 'ERROR';
+        else
+            insert into residu (nif_empresa, cod_residu, toxicitat, quantitat_residu, aa_residu)
+            values (nif_emp, cod_res, tox, quant_res, aa_res);
+            commit;
+            raise notice 'Afegit amb exit';
         end if;
     end;
 $$;
+
+call insertRegs(:nif_empresa, :cod_residu, :toxicitat, :quantitat_residu, :aa_residu)
