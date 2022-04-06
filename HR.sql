@@ -752,3 +752,144 @@ create or replace procedure borraremp_tran(cod_emp numeric) language plpgsql as 
 $$;
 
 call borraremp_tran(:id)
+
+/* Activitat 3.3.1 */
+-- Exercici 1
+CREATE OR REPLACE FUNCTION nom_departament_notnull() RETURNS TRIGGER language plpgsql AS $$
+    DECLARE
+    BEGIN
+	    if NEW.department_name is null then
+            return NULL;
+        end if;
+        RETURN NEW;
+    END;
+$$;
+
+CREATE TRIGGER nom_departament_notnull BEFORE INSERT
+    ON departments
+	FOR EACH ROW
+    EXECUTE PROCEDURE nom_departament_notnull();
+
+select * from departments;
+
+insert into departments (department_id, department_name, manager_id, location_id)
+values (1235, null, 100, 1500);
+
+-- Exercici 2
+CREATE OR REPLACE FUNCTION restriccions_emp() RETURNS TRIGGER language plpgsql AS $$
+    DECLARE
+    BEGIN
+        if tg_op = 'INSERT'
+        then
+            if NEW.salary < 0
+            then
+                return NULL;
+            end if;
+            RETURN NEW;
+        elseif tg_op = 'UPDATE'
+        then
+            if NEW.commission_pct is not null
+            then
+                if NEW.salary > OLD.salary
+                then
+                    return NEW;
+                end if;
+            end if;
+            return null;
+        end if;
+    END;
+$$;
+
+create trigger restriccions_emp before insert or update
+    on employees
+	for each row
+    execute procedure restriccions_emp();
+
+insert into employees (employee_id, first_name, last_name, email, phone_number, hire_date, job_id, salary, commission_pct, manager_id, department_id)
+values (1230, 'xddddd', 'abc', 'marti@gaw.cm', '123.123.1231', '2022-01-04', 'IT_PROG', 200, null, 100, 90);
+
+update employees
+set salary = 6000
+where employee_id = 1230;
+
+select * from employees;
+
+-- Exercici 3
+CREATE OR REPLACE FUNCTION comissio() RETURNS TRIGGER language plpgsql AS $$
+    DECLARE
+    BEGIN
+        if((NEW.commission_pct*NEW.salary) > NEW.salary) then
+            return null;
+        end if;
+        return NEW;
+    END;
+$$;
+
+create trigger comissio before insert
+    on employees
+	for each row
+    execute procedure comissio();
+
+select * from employees;
+
+-- Exercici 4
+CREATE OR REPLACE FUNCTION errada_modificacio() RETURNS TRIGGER language plpgsql AS $$
+    DECLARE
+    BEGIN
+        if NEW.first_name = OLD.first_name and NEW.employee_id = OLD.employee_id then
+            return NEW;
+        end if;
+        if NEW.salary < ((10.0*OLD.salary)/100.0)+OLD.salary then
+            return NEW;
+        end if;
+        return null;
+    END;
+$$;
+
+create trigger errada_modificacio before update
+    on employees
+	for each row
+    execute procedure errada_modificacio();
+
+update employees
+set salary = 4200
+where employee_id = 185;
+
+select * from employees;
+
+-- Exercici 5
+create table resauditaremp (
+    resultat VARCHAR(200)
+);
+
+CREATE OR REPLACE FUNCTION auditartaulaemp() RETURNS TRIGGER language plpgsql AS $$
+    DECLARE
+    BEGIN
+        if tg_op = 'DELETE'
+        then
+            insert into resauditaremp (resultat) values ('Data i hora: ' || now() || ', Codi empleat: ' || OLD.employee_id || ', Cognom: ' || OLD.last_name);
+        elseif tg_op = 'INSERT'
+        then
+            insert into resauditaremp (resultat) values ('Data i hora: ' || now() || ', Codi empleat: ' || NEW.employee_id || ', Cognom: ' || NEW.last_name);
+        end if;
+        return null;
+    END;
+$$;
+
+create or replace function auditartaulaemp2() returns trigger language plpgsql as $$
+    begin
+        insert into resauditaremp(resultat)
+        values (concat(tg_name, '-', tg_when, '-', tg_level, '-', tg_op, '-', now()));
+        return null;
+    end;
+$$;
+
+create trigger auditartaulaemp before insert or delete
+    on employees
+	for each row
+    execute procedure auditartaulaemp2();
+
+select * from resauditaremp;
+
+delete from employees
+where employee_id = 1230;
