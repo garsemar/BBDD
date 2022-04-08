@@ -313,3 +313,92 @@ create or replace procedure insertRegs(nif_emp varchar, cod_res numeric, tox num
 $$;
 
 call insertRegs(:nif_empresa, :cod_residu, :toxicitat, :quantitat_residu, :aa_residu)
+
+/* Llenguatge Procedural (A)_Part 3 */
+-- Exercici 1
+create function quantres() returns trigger language plpgsql as $$
+    begin
+        if NEW.quantitat_residu < OLD.quantitat_residu then
+            raise 'La quantitat nova % no pot ser més petita que la quantitat actual %', NEW.quantitat_residu, OLD.quantitat_residu;
+        else
+            return NEW;
+        end if;
+    end;
+$$;
+
+create trigger quantres before update
+    on residu
+	for each row
+    execute procedure quantres();
+
+update residu -- No funciona
+set quantitat_residu = 2
+where nif_empresa = 'A-12000035';
+
+update residu -- Funciona
+set quantitat_residu = 260
+where nif_empresa = 'A-12000035';
+
+-- Exercici 2
+-- B
+create function update_dades() returns trigger language plpgsql as $$
+    begin
+        if NEW.toxicitat < OLD.toxicitat then
+            raise 'La quantitat nova % no pot ser més petita que la quantitat actual %', NEW.toxicitat, OLD.toxicitat;
+        else
+            return NEW;
+        end if;
+    end;
+$$;
+
+create trigger update_dades before update
+    on residu
+	for each row
+    execute procedure update_dades();
+
+update residu -- No funciona
+set toxicitat = 2
+where nif_empresa = 'A-12000035';
+
+update residu -- Funciona
+set toxicitat = 380
+where nif_empresa = 'A-12000035';
+
+-- C
+create function no_esborrar_dades() returns trigger language plpgsql as $$
+    begin
+        raise 'No es permet eliminar dades';
+    end;
+$$;
+
+create trigger no_esborrar_dades before delete
+    on residu
+	for each row
+    execute procedure no_esborrar_dades();
+
+delete from residu -- No funciona
+where nif_empresa = 'A-12000035';
+
+-- D
+CREATE TABLE canvis (
+    timestamp_ TIMESTAMP WITH TIME ZONE default NOW(),
+    nom_trigger text,
+    tipus_trigger text,
+    nivell_trigger text,
+    ordre text
+);
+
+create or replace function registrar_canvis() returns trigger language plpgsql as $$
+    begin
+        insert into canvis (nom_trigger, tipus_trigger, nivell_trigger, ordre) VALUES (tg_name, tg_when, tg_level, tg_op);
+        return new;
+    end;
+$$;
+
+create trigger registrar_canvis before insert or update or delete
+    on residu
+	for each row
+    execute procedure registrar_canvis();
+
+insert into residu (nif_empresa, cod_residu, toxicitat, quantitat_residu, aa_residu)
+values ('A-12000428', 109, 94, 54, null);
