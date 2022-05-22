@@ -1,0 +1,125 @@
+show dbs;
+
+use movies;
+
+// Ex 1
+db.movieDetails.insertMany([{
+    title: "Fight Club",
+    writers: "Chuck",
+    year: 1999,
+    actors: [
+        "Brad Pitt",
+        "Edward Norton"
+    ]
+},
+{
+    title: "Pulp Fiction",
+    writers: "Quentin Tarantino",
+    year : 1994,
+    actors : [
+        "John Travolta",
+        "Uma Thurman"
+    ]
+},
+{
+    title: "Inglorious Basterds",
+    writers: "Quentin Tarantino",
+    year: 2009,
+    actors: [
+        "Brad Pitt",
+        "Diane Kruger",
+        "Eli Roth"
+    ]
+},
+{
+    title: "The Hobbit: The Desolation of Smaug",
+    writers : "J.R.R. Tolkein",
+    year : 2013
+},
+{
+    title: "The Hobbit: The Battle of the Five Armies",
+    writers: "J.R.R. Tolkein",
+    year: 2012,
+    plot: "Bilbo and Company are forced to engage in a war against an array of ombatants and keep the Lonely Mountain from falling into the hands of a rising darkness."
+},
+{
+    title : "The Shawshank Redemption",
+    writer : "Stephen King",
+    year : 1994,
+    actors : [
+        "Tim Robbins",
+        "Morgan Freeman",
+        "Bob Gunton"
+    ],
+    plot: "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency."
+},
+{
+    title : "Avatar",
+    writer : "James Cameron",
+    year : 2009,
+    actors : [
+        "Sam Worthington",
+        "Zoe Saldana",
+        "Sigourney Weaver"
+    ],
+    synopsis : "A paraplegic marine dispatched to the moon Pandora on a unique mission becomes torn between following his orders and protecting the world he feels is his home."
+}]);
+
+
+// Ex 2
+// A
+db.movieDetails.find();
+
+// B
+db.movieDetails.find({writers: "Quentin Tarantino"});
+
+// C
+db.movieDetails.find({actors: {$in: ["Quentin Tarantino"]}});
+
+// D
+db.movieDetails.find({$and: [{genres: {$in: ["Action"]}}, {genres: {$in: ["Western"]}}]});
+
+// E
+db.movieDetails.find({$and: [{year: {$gt: 1989}}, {year: {$lt: 2000}}]});
+
+// F
+db.movieDetails.find({$or: [{year: {$lt: 2000}}, {year: {$gt: 2010}}]});
+
+
+// 3
+// A
+db.movieDetails.updateOne({_id: ObjectId("5692a54224de1e0ce2dfdcc7")}, { $set: {synopsis: "A reluctant hobbit, Bilbo Baggins, sets out to the Lonely Mountain with a spirited group of dwarves to reclaim their mountain home - and the gold within it - from the dragon Smaug."}})
+
+// B
+db.movieDetails.updateOne({_id: ObjectId("628a2a756d57d76e4a1e1ceb")}, {$set: {synopsis: "The dwarves, along with Bilbo Baggins and Gandalf the Grey, continue their quest to reclaim Erebor, their homeland, from Smaug. Bilbo Baggins is in possession of a mysterious and magical ring."}})
+
+// C
+db.movieDetails.updateOne({_id: ObjectId("628a2a756d57d76e4a1e1ce9")}, {$push: {actors: "Samuel L. Jackson"}})
+
+
+// 4
+// A
+db.movieDetails.find({synopsis: {$regex: "Bilbo"}})
+
+// B
+db.movieDetails.find({synopsis: {$regex: "Gandalf"}})
+
+// C
+db.movieDetails.find({$and: [{synopsis: {$regex: "Bilbo"}}, {synopsis: {$not: /Gandalf/}}]})
+
+// D
+db.movieDetails.find({$or: [{synopsis: {$regex: "dwarves"}}, {synopsis: {$regex: "hobbit"}}]})
+
+// E
+db.movieDetails.find({$and: [{title: {$regex: "gold"}}, {title: {$regex: "dragons"}}]})
+
+
+// 5
+// A
+db.movieDetails.deleteOne( {_id: ObjectId("569190cd24de1e0ce2dfcd64")});
+
+// B
+db.movieDetails.deleteOne( {_id: ObjectId("569190cd24de1e0ce2dfcd5e")});
+
+// C
+db.movieDetails.updateMany({ }, {$unset: {type: ""}})
