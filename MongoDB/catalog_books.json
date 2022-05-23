@@ -1,0 +1,74 @@
+show dbs;
+
+use catalog_books;
+
+db.catalog.books.find();
+
+// Ex 1
+db.catalog.books.insertMany([{
+    title: "FAITH (VOL. 4): LOS ANTIFAITH",
+    isbn : "9788417615871",
+    pageCount: 112,
+    publishedDate: ISODate("2019-05-14T08:00:00.000Z"),
+    thumbnailUrl: "https://www.casadellibro.com/libro-faith-vol-4-los-antifaith/9788417615871/9611541",
+    shortDescription: "Faith, la heroína voladora que protege Los Ángeles, es como un sueño para los habitantes de la ciudad... ¡Y ahora están a punto de conocer a su peor pesadilla! Cuando una psiot fugitiva empieza a arrasar las calles, Faith se ve obligada a detener la locura que se ha desatado antes de que todo se vaya al infierno. Pero esta no es una amenaza normal... No solo tiene el poder de absorber la energía de todo lo que la rodea, ¡sino que es una de las estrellas pop más controvertidas de Los Ángeles!.",
+    status: "PUBLISH",
+    authors: [
+        "Jody Houser"
+    ],
+    categories : [
+        "Cómic Adulto"
+    ]
+},
+{
+    title: "SNOOPY Y CARLITOS 1969-1970 Nº 10/25 (NUEVA EDICIÓN)",
+    isbn: "9788491465522",
+    pageCount: 352,
+    publishedDate: ISODate("2019-05-15T08:00:00.000Z"),
+    thumbnailUrl: "https://www.casadellibro.com/libro-snoopy-y-carlitos-1969af1970-nba-102f25-nueva-edicion/9788491465522/9476893",
+    shortDescription: "Tiras publicadas entre 1969 y 1970 de Carlitos, la obra maestra de Charles M. Schulz. El mundo de Carlitos es un microcosmos, una pequeña comedia humana válida tanto para el lector inocente como para el sofisticado.Y la mejor manera de apreciar lo expuesto es esta edición en la que permite apreciar viñeta a viñeta la evolución tanto del artista como de los personajes.",
+    status: "PUBLISH",
+    authors: [
+        "Charles M. Schulz"
+    ],
+    categories : [
+        "Cómic Adulto"
+    ]
+}]);
+
+
+// Ex 2
+// A
+db.catalog.books.updateMany({$and: [{categories: {$in: ["Open Source"]}}, {status: "PUBLISH"}]}, {$set: {likes: 2000}});
+
+// B
+db.catalog.books.updateOne({title: "OSGi in Depth"}, {$push: {categories: "Internet"}});
+
+
+// Ex 3
+// A
+db.catalog.books.find({$and: [{$and: [{publishedDate: {$gt: ISODate("2011-01-01T00:00:00.000Z")}}, {publishedDate: {$lt: ISODate("2011-12-30T24:00:00.000Z")}}]}, {$and: [{pageCount: {$gt: 299}}, {pageCount: {$lt: 501}}]}]}).sort({_id: -1});
+
+// B
+db.catalog.books.find({$or: [{authors: {$size: 2}}, {authors: {$size: 3}}, {authors: {$size: 4}}]});
+db.catalog.books.find({authors: {$size: {$gt: 2}}});
+
+// C
+db.catalog.books.find({$or: [{categories: {$in: ["Internet"]}}, {categories: {$in: ["Software Engineering"]}}]});
+
+// D
+db.catalog.books.find({$and: [{$and: [{publishedDate: {$gt: ISODate("2011-01-01T00:00:00.000Z")}}, {publishedDate: {$lt: ISODate("2011-12-30T24:00:00.000Z")}}]}, {title: {$regex: "Android"}}]}).count();
+
+
+// Ex 4
+// A
+db.catalog.books.find({$or: [{title: {$regex: "Edition"}}, {title: {$regex: "Internet"}}]});
+
+// B
+db.catalog.books.find({authors: {$in: [/^A/]}});
+
+// C
+db.catalog.books.find({categories: {$in: [/..../]}});
+
+// D
+db.catalog.books.find({$and: [{categories: {$in: ["Java"]}}, {title: {$regex: /[AEIOUaeiou][AEIOUaeiou]/}}]});
