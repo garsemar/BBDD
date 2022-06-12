@@ -912,3 +912,217 @@ select employee_id, first_name, hire_date, salary from employees;
 
 select * from prova;
 rollback;
+
+insert into prova
+values (390, 'Julio', (select hire_date from employees where employee_id = 119), (select salary from employees where employee_id = 119));
+
+insert into prova
+select employee_id, first_name, hire_date, salary from employees where department_id = 90;
+
+begin;
+update prova
+set salary = salary+((salary*3)/100);
+select * from prova;
+rollback;
+
+begin;
+update prova
+set hire_date = hire_date+365;
+
+select max(salary)
+from employees
+where job_id = (select job_id from employees where employee_id = 109);
+
+create table jobs2 as select * from jobs;
+
+begin;
+delete from jobs2
+where min_salary*1.7 < jobs2.max_salary;
+
+select * from jobs2;
+
+-- Ex 3
+select now() as Date;
+
+select employee_id, last_name, salary, salary+((salary*15)/100)::int as salary_Incrementat
+from employees;
+
+select employee_id, last_name, salary, salary+((salary*15)/100)::int as salary_Incrementat, ((salary+((salary*15)/100))-salary)::int as Increase
+from employees;
+
+select initcap(last_name) as "Name", length(first_name) as "Length"
+from employees
+where left(upper(first_name), 1) = 'J' or left(upper(first_name), 1) = 'A' or left(upper(first_name), 1) = 'M';
+
+select last_name, (extract(year from age(now(), hire_date))*12)+extract(months from age(now(), hire_date)) as MONTHS_WORKED
+from employees;
+
+select concat(first_name, ' earns ',salary,' monthly but wants ',salary*3)
+from employees;
+
+select lpad(to_char(salary,'fm9999999.099'),15,'$') from employees;
+
+select hire_date, (hire_date + interval '6 months')::date, to_char((hire_date + interval '6 months')::date,'day'),
+       date_trunc('week', (hire_date + interval '6 month'+ interval '1 week'))::date
+from employees;
+
+SELECT last_name, hire_date, TO_CHAR(hire_date,'Day') as "Dia setmana"
+FROM employees
+ORDER BY TO_CHAR(hire_date-1,'D');
+
+SELECT last_name, coalesce(commission_pct::varchar, 'No commission')
+FROM employees;
+
+select rpad('*',div(salary*12, 1000)::int,'*') as EMPLOYEES_AND_THEIR_SALARIES, div(salary*12, 1000), salary*12
+from employees;
+
+-- Ex 4
+select first_name, salary::int
+from employees;
+
+select first_name, to_char(hire_date, 'month')
+from employees
+where extract(months from hire_date) = 5;
+
+select first_name, to_char((hire_date + interval '1 month - 1'),'yyyy-mm-dd')
+from employees;
+
+select first_name, to_char(hire_date, 'yyyy')
+from employees
+where to_char(hire_date, 'yyyy') = '2001';
+
+select split_part(job_title, ' ', 1)
+from jobs2;
+
+select length(first_name)
+from employees
+where position('b' in last_name) > 3;
+
+select extract(day from (now() - timestamp '01/01/2011'));
+
+select count(*)
+from employees
+where extract(day from hire_date) > 15;
+
+select concat('El cognom és: ', last_name)
+from employees;
+
+select to_char(hire_date, 'month-dd-yyyy')
+from employees
+where department_id = 10;
+
+-- Ex 5
+create table clientbotiga (
+    idclient numeric(5),
+    nom varchar(10) not null check ( nom = initcap(nom) ),
+    cognoms varchar(50) check ( cognoms = initcap(cognoms) ),
+    adreca varchar(50),
+    cp varchar(5),
+
+    constraint pk_clientbotiga primary key (idclient)
+);
+
+create table productebotiga (
+    idprod numeric(5),
+    nomprod varchar(20) check ( nomprod = upper(nomprod) ),
+    preu numeric(5,2) not null check ( preu > -1 ),
+    concepte varchar(15) check ( concepte = initcap(concepte) ),
+
+    constraint pk_productebotiga primary key (idprod)
+);
+
+create table comandabotiga (
+    idcomanda numeric(8),
+    idprod numeric(5),
+    idclient numeric(5),
+    quantitat numeric(5),
+    datacomanda date default now(),
+
+    constraint pk_comandabotiga primary key (idcomanda),
+    constraint fk_producte foreign key (idprod) references productebotiga(idprod) on delete set null on update cascade,
+    constraint fk_client foreign key (idclient) references clientbotiga(idclient) on delete set null on update cascade
+);
+
+alter table clientbotiga
+alter column COGNOMS set not null;
+
+alter table clientbotiga
+alter column cp set not null;
+
+alter table comandabotiga
+alter column quantitat set not null;
+
+alter table comandabotiga add constraint quantitatZero check ( quantitat > 0 );
+
+insert into clientbotiga (idclient, nom, cognoms, adreca, cp)
+values (2, 'Marti', 'Garcia', null, 08026);
+
+insert into productebotiga (idprod, nomprod, preu, concepte)
+values (1, 'PS5', 499, 'Ps5');
+
+insert into comandabotiga (idcomanda, idprod, idclient, quantitat)
+values (1, 1, 1, 1);
+
+select * from clientbotiga;
+select * from productebotiga;
+select * from comandabotiga;
+
+alter table productebotiga
+add column preuiva varchar(20);
+
+alter table clientbotiga
+add column telefon numeric(12);
+
+alter table productebotiga
+alter column preuiva type numeric(4,2)
+using preuiva::numeric(4,2);
+
+update productebotiga
+set preu = preu+((preu*preuiva)/100);
+
+-- Ex 5
+CREATE TABLE SOCIO (
+     COD_SOC    numeric(2) NOT NULL,
+     NOMBRE     varchar(20),
+     APELLIDOS	varchar(20),
+     DIRECCION	varchar(20),
+     TELEFONO	varchar(10),
+     POBLACION	varchar(30),
+     CP		varchar(5),
+     PROVINCIA	varchar(20),
+     PAIS		varchar(10),
+     EDAD		numeric,
+     FECHAALTA	DATE,
+     CUOTA	numeric,
+     CONSTRAINT SOCIO_CODSOC_PK PRIMARY KEY (COD_SOC)
+);
+
+CREATE TABLE PELICULA (
+     COD_PEL    numeric(4) NOT NULL,
+     TITULO    	varchar(20),
+     DURACION	numeric,
+     DIRECTOR	varchar(20),
+     CONSTRAINT PELICULA_CODPEL_PK PRIMARY KEY (COD_PEL)
+);
+
+CREATE TABLE TIENE(
+     COD_SOC    numeric(2) NOT NULL REFERENCES SOCIO(COD_SOC),
+     COD_PEL    numeric(4) NOT NULL REFERENCES PELICULA(COD_PEL),
+     FECHA_ADQ  DATE,
+     FECHA_DEV  DATE,
+     CONSTRAINT TIENE_CODIGOS_PK PRIMARY KEY (COD_SOC,COD_PEL)
+);
+
+create sequence cod_soc_seq
+    start 10
+    maxvalue 99
+    increment by 1
+    no cycle;
+
+alter table socio
+alter column cod_soc set default nextval('cod_soc_seq');
+
+insert into socio (NOMBRE, APELLIDOS, DIRECCION, TELEFONO, POBLACION, CP, PROVINCIA, PAIS, EDAD, FECHAALTA, CUOTA)
+values ('a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 12, '12/12/2022', 6000);
+
+select * from socio
