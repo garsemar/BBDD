@@ -893,3 +893,22 @@ select * from resauditaremp;
 
 delete from employees
 where employee_id = 1230;
+
+/* Exam preparation */
+insert into employees (employee_id, first_name, last_name, email, phone_number, hire_date, job_id, salary, commission_pct, manager_id, department_id)
+values (402, 'Jose', 'Calatayud', 'prova@prova.com', null, now(), 'SA_MAN', 1600, null, null, null);
+
+rollback;
+
+Create table prova (
+id numeric(6) primary key,
+name varchar(20),
+hire_date date,
+salary numeric(8,2));
+
+begin;
+insert into prova
+select employee_id, first_name, hire_date, salary from employees;
+
+select * from prova;
+rollback;
