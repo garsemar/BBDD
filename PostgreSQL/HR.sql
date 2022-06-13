@@ -1126,3 +1126,12 @@ insert into socio (NOMBRE, APELLIDOS, DIRECCION, TELEFONO, POBLACION, CP, PROVIN
 values ('a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 12, '12/12/2022', 6000);
 
 select * from socio
+
+create view consulta_soci as
+    select *
+    from socio
+    order by APELLIDOS;
+
+select * from consulta_soci;
+
+create unique index apellido_indx on socio (apellidos);
