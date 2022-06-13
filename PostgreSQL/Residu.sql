@@ -402,3 +402,182 @@ create trigger registrar_canvis before insert or update or delete
 
 insert into residu (nif_empresa, cod_residu, toxicitat, quantitat_residu, aa_residu)
 values ('A-12000428', 109, 94, 54, null);
+
+/* Exam preparation */
+select nif_empresa, data_enviament
+from trasllat_empresatransport
+where cost between 35000 and 36500;
+
+select distinct tractament
+from trasllat;
+
+select distinct ciutat_emptransport
+from empresatransportista
+where ciutat_emptransport not like '';
+
+select nif_empresa, cod_residu, tractament, envas
+from trasllat
+where left(upper(envas), 1) = 'B';
+
+select tipus_transport, nom_emptransport
+from trasllat_empresatransport join empresatransportista e on e.nif_emptransport = trasllat_empresatransport.nif_emptransport
+where cod_desti = '6' or cod_desti = '7' or cod_desti = '8';
+
+select nif_empresa, nom_empresa, ciutat_empresa
+from empresaproductora
+where nom_empresa like '_A%' and nom_empresa like '%S' and (ciutat_empresa = 'MÁLAGA' or ciutat_empresa = 'SEVILLA' or ciutat_empresa = 'CÓRDOBA')
+order by nom_empresa desc;
+
+select empresaproductora.nif_empresa, nom_empresa, data_enviament
+from empresaproductora join trasllat t on empresaproductora.nif_empresa = t.nif_empresa
+where data_enviament between '01/01/2016'::date and '03/31/2016'::date;
+
+/* Subconsultes sensilles */
+SELECT nif_emptransport, NOM_EMPTRANSPORT
+  FROM EMPRESATRANSPORTISTA
+  WHERE nif_emptransport IN
+     (SELECT DISTINCT trasllat_empresatransport.nif_emptransport
+        FROM TRASLLAT_EMPRESATRANSPORT
+        WHERE nif_empresa IN
+           (SELECT nif_empresa
+              FROM EMPRESAPRODUCTORA
+              WHERE lower(CIUTAT_EMPRESA) = 'granada' ))
+  ORDER BY NOM_EMPTRANSPORT;
+
+select sum(cost) as "Import de trasllats"
+from trasllat_empresatransport
+where nif_emptransport = 'A-22300282' and nif_empresa = 'A-12000466' and cod_desti = '22' and cost is not null;
+
+select te.nif_emptransport, nom_emptransport
+from empresatransportista join trasllat_empresatransport te on empresatransportista.nif_emptransport = te.nif_emptransport
+where ciutat_emptransport = 'GRANADA' and cod_desti = (select cod_desti from desti where ciutat_desti = 'BARCELONA')
+order by cost desc limit 1;
+
+select nom_emptransport
+from empresatransportista
+where nif_emptransport in (
+    select nif_emptransport
+    from trasllat_empresatransport
+    where nif_empresa in (
+        select nif_empresa
+        from empresaproductora
+        where ciutat_empresa = 'MADRID'
+    )
+);
+
+select nom_empresa, empresaproductora.nif_empresa
+from empresaproductora join trasllat t on empresaproductora.nif_empresa = t.nif_empresa join residu r on empresaproductora.nif_empresa = r.nif_empresa
+where quantitat_trasllat in (
+    select max(quantitat_trasllat)
+    from trasllat
+    where nif_empresa in (
+        select nif_empresa
+        from residu
+        where toxicitat in (
+            select max(toxicitat)
+            from residu))
+) and r.toxicitat = (select max(toxicitat) from residu);
+
+select e.nif_empresa, nom_empresa
+from empresaproductora e join residu_constituent rc on e.nif_empresa = rc.nif_empresa
+where cod_constituent::varchar like '992%';
+
+select nif_empresa, nom_empresa
+from empresaproductora
+where nif_empresa in (
+    select nif_empresa
+    from residu_constituent
+    where cod_constituent::varchar like '992%');
+
+select nif_emptransport, nom_emptransport, ciutat_emptransport
+from empresatransportista
+where nif_emptransport in (
+    select nif_emptransport
+    from trasllat_empresatransport
+    where cod_desti in (
+        select cod_desti
+        from desti
+        where upper(ciutat_desti) = 'BARCELONA'
+    ) and cost in (
+        select min(cost)
+        from trasllat_empresatransport
+        where cod_desti in (
+            select cod_desti
+            from desti
+            where upper(ciutat_desti) = 'BARCELONA'
+        )
+    )
+);
+
+select cod_desti, quantitat_trasllat, data_enviament
+from trasllat
+where extract(year from data_enviament) = 2016 and extract(day from data_enviament) = 1;
+
+select split_part(nom_empresa, ' ', 1)
+from empresaproductora;
+
+select nom_empresa, ciutat_empresa
+from empresaproductora
+where ciutat_empresa like '___I%';
+
+select current_date - max(data_enviament) from trasllat;
+
+/* Subconsultes avançades */
+select tipus_transport, count(nif_empresa) as Total_empreses
+from trasllat_empresatransport
+where data_enviament between '06/15/2016' and '05/17/2017'
+group by tipus_transport;
+
+select tipus_transport, sum(kms)
+from trasllat_empresatransport
+where (extract(month from data_enviament) = 4 or extract(month from data_enviament) = 5) and extract(year from data_enviament) = '2016'
+group by tipus_transport;
+
+select ciutat_desti, sum(quantitat_trasllat)
+from trasllat join desti d on d.cod_desti = trasllat.cod_desti
+where extract(year from data_arribada) = '2016'
+group by ciutat_desti
+having sum(quantitat_trasllat) in (select max(a) from (select sum(quantitat_trasllat) as a
+from trasllat
+where extract(year from data_arribada) = '2016'
+group by cod_desti) as b);
+
+select nom_emptransport, count(t.nif_empresa)
+from trasllat_empresatransport tt join trasllat t on t.nif_empresa = tt.nif_empresa and t.cod_residu = tt.cod_residu and t.data_enviament = tt.data_enviament and t.cod_desti = tt.cod_desti join empresatransportista e on e.nif_emptransport = tt.nif_emptransport
+where t.data_enviament between '01/01/2016'::date and '03/31/2016'::date
+group by nom_emptransport
+having count(t.nif_empresa) in (select max(a) from (select count(t.nif_empresa) as a
+from trasllat_empresatransport tt join trasllat t on t.nif_empresa = tt.nif_empresa and t.cod_residu = tt.cod_residu and t.data_enviament = tt.data_enviament and t.cod_desti = tt.cod_desti join empresatransportista e on e.nif_emptransport = tt.nif_emptransport
+where t.data_enviament between '01/01/2016'::date and '03/31/2016'::date
+group by nom_emptransport) as b);
+
+select nom_empresa, empresaproductora.nif_empresa, sum(quantitat_trasllat) as Residus
+from empresaproductora join trasllat t on empresaproductora.nif_empresa = t.nif_empresa join residu r on empresaproductora.nif_empresa = r.nif_empresa
+where r.toxicitat = (select max(toxicitat) from residu)
+group by nom_empresa, empresaproductora.nif_empresa
+having sum(quantitat_trasllat) in (select min(a) from (select sum(quantitat_trasllat) as a
+from empresaproductora join trasllat t on empresaproductora.nif_empresa = t.nif_empresa join residu r on empresaproductora.nif_empresa = r.nif_empresa
+where r.toxicitat = (select max(toxicitat) from residu)
+group by nom_empresa, empresaproductora.nif_empresa) as b);
+
+select nom_emptransport, count(t.nif_empresa)
+from trasllat_empresatransport tt join trasllat t on t.nif_empresa = tt.nif_empresa and t.cod_residu = tt.cod_residu and t.data_enviament = tt.data_enviament and t.cod_desti = tt.cod_desti join empresatransportista e on e.nif_emptransport = tt.nif_emptransport
+where t.data_enviament between '04/01/2016'::date and '06/30/2016'::date
+group by nom_emptransport
+having count(t.nif_empresa) in (select min(a) from (select count(t.nif_empresa) as a
+from trasllat_empresatransport tt join trasllat t on t.nif_empresa = tt.nif_empresa and t.cod_residu = tt.cod_residu and t.data_enviament = tt.data_enviament and t.cod_desti = tt.cod_desti join empresatransportista e on e.nif_emptransport = tt.nif_emptransport
+where t.data_enviament between '04/01/2016'::date and '06/30/2016'::date
+group by nom_emptransport) as b);
+
+select ciutat_desti, sum(quantitat_trasllat) as Residu
+from desti join trasllat t on desti.cod_desti = t.cod_desti
+where extract(year from data_arribada) = 2016
+group by ciutat_desti
+having sum(quantitat_trasllat) in (select max(a) from (select sum(quantitat_trasllat) as a
+from desti join trasllat t on desti.cod_desti = t.cod_desti
+where extract(year from data_arribada) = 2016
+group by ciutat_desti) as b);
+
+select tractament, max(quantitat_trasllat) as "Max residu", min(quantitat_trasllat) as "Min residu"
+from trasllat
+group by tractament
